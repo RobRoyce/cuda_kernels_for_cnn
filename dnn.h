@@ -67,4 +67,14 @@ void* aligned_malloc(uint64_t align, uint64_t bytes)  {
     return (void*) ptr;
 }
 
+
+
+void randomizeArray(float *data, int len)
+{
+    for(int i = 0; i < len; i++)
+    {
+        data[i] = static_cast <float> (rand()) / static_cast <float> (RAND_MAX) - 0.5f;
+    }
+}
+
 #endif
