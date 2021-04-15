@@ -8,6 +8,9 @@ all: $(MODULE)
 
 HEADERS=
 
+debug: convolution.cu $(HEADERS)
+	$(NVCC) $^ $(CFLAGS) -g -G -o $@ -DNx=224 -DNy=224 -DKx=3  -DKy=3  -DNi=64  -DNn=64        -DTii=32 -DTi=16  -DTnn=32 -DTn=16 -DTx=7 -DTy=7
+
 conv1: convolution.cu $(HEADERS)
 	$(NVCC) $^ $(CFLAGS) -o $@ -DNx=224 -DNy=224 -DKx=3  -DKy=3  -DNi=64  -DNn=64        -DTii=32 -DTi=16  -DTnn=32 -DTn=16 -DTx=7 -DTy=7
 
