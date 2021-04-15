@@ -27,7 +27,15 @@ __device__ void mmult(float *a, float *b, float *c, int2 adim, int2 bdim)
     int row = threadIdx.x + blockIdx.x*blockDim.x;
     int col = threadIdx.y + blockIdx.y*blockDim.y;
 
-    if(row < bdim.x && col < adim.y)
+    if(adim.x != bdim.x)
+    {
+    	if(row == 0 & col == 0)
+    	{
+    		printf("Error: Incompatible matrix dimensions: [%dx%d] * [%dx%d]\n", adim.y, adim.x, bdim.x, bdim.y);
+    	}
+    }
+
+    if(row < bdim.y && col < adim.y)
     {
 		for(int i = 0; i < adim.x; i++)
 		{
@@ -43,13 +51,12 @@ __device__ void relu(float *mtx, int2 dim)
 
     if(row < dim.x && col < dim.y)
     {
-			mtx[col*dim.y + row] *= (mtx[col*dim.y + row] > 0);
+			mtx[col*dim.x + row] *= (mtx[col*dim.x + row] > 0);
     }
 }
 
-__global__ void classify(float *in, float *out)
+__global__ void classify(float *in, float *out, int2 in_dim)
 {
-    const int2 in_dim = make_int2(Ni, 1);
     const int2 weight_dim = make_int2(Ni, Nn);
 
     mmult(d_weights, in, out, weight_dim, in_dim);
@@ -60,22 +67,25 @@ void randomizeArray(float *data, int len)
 {
 	for(int i = 0; i < len; i++)
 	{
-		data[i] = static_cast <float> (rand()) / static_cast <float> (RAND_MAX) * 16.0f;
+		data[i] = static_cast <float> (rand()) / static_cast <float> (RAND_MAX) * 16.0f - 8.0f;
 	}
 }
 
 int main(int argc, char **argv) 
 {
-     const int in_size = sizeof(float) * Ni;  // Total size of input buffer in bytes
-     const int out_size = sizeof(float) * Nn; // Total size of output buffer in bytes
+     const int2 in_dim = make_int2(Ni, 1);    					// The dimensions of the input matrix
+     const int in_size = sizeof(float) * in_dim.x * in_dim.y;   // Total size of input buffer in bytes
 
-     const dim3 grid_size(Nn/16,16,1);
+     const int2 out_dim = make_int2(in_dim.y, Nn);               // The dimensions of the output matrix
+     const int out_size = sizeof(float) * out_dim.x * out_dim.y; // Total size of output buffer in bytes
+
+     const dim3 grid_size((out_dim.x * out_dim.y)/16,16,1);
      const dim3 block_size(16,16,1);
 
-     float h_in_data[Ni]; // Input data on host
+     float *h_in_data = new float[in_dim.x * in_dim.y]; // Input data on host
      float *d_in_data;    // Input data on device
 
-     float h_out_data[Nn]; // Output on device
+     float *h_out_data = new float[out_dim.x * out_dim.y];    // Output on device
      float *d_out_data;    // Output on host
 
      float *h_random_weights = new float[Ni*Nn];
@@ -83,7 +93,7 @@ int main(int argc, char **argv)
      // Make some random data.
 
      randomizeArray(h_random_weights, Ni*Nn);
-     randomizeArray(h_in_data, Ni);
+     randomizeArray(h_in_data, in_dim.x * in_dim.y);
 
      cudaMemcpyToSymbol(d_weights, h_random_weights, Nn*Ni*sizeof(float));
 
@@ -92,8 +102,7 @@ int main(int argc, char **argv)
 
      cudaMalloc(&d_out_data, out_size);
 
-     classify<<<grid_size, block_size>>>((float*)d_in_data, (float*)d_out_data);
-
+     classify<<<grid_size, block_size>>>((float*)d_in_data, (float*)d_out_data, in_dim);
      cudaDeviceSynchronize();
 
      cudaMemcpy(h_out_data, d_out_data, out_size, cudaMemcpyDeviceToHost); // Retrieve the neuron outputs.
@@ -103,13 +112,23 @@ int main(int argc, char **argv)
 		 printf("%f ", h_random_weights[i]);
      printf("\n\n");
 
-     for(int i = 0; i < Nn; i++)
-    	 printf("%f ", h_in_data[i]);
-     printf("\n\n");
+     for(int i = 0; i < in_dim.y; i++)
+     {
+    	 for(int j = 0; j < in_dim.x; j++)
+    	 {
+        	 printf("%f ", h_in_data[i*in_dim.x + j]);
+    	 }
+         printf("\n");
+     }
 
-     for(int i = 0; i < Nn; i++)
-    	 printf("%f ", h_out_data[i]);
-     printf("\n\n");
+     for(int i = 0; i < out_dim.x; i++)
+     {
+    	 for(int j = 0; j < out_dim.y; j++)
+    	 {
+        	 printf("%f ", h_out_data[i*out_dim.y + j]);
+    	 }
+         printf("\n");
+     }
 
     return 0;
 }
