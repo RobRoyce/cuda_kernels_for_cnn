@@ -60,7 +60,7 @@ __global__ void classify(float *in, float *out, int2 in_dim)
     const int2 weight_dim = make_int2(Ni, Nn);
 
     mmult(d_weights, in, out, weight_dim, in_dim);
-    //relu(out, make_int2(weight_dim.y, in_dim.x));
+    relu(out, make_int2(weight_dim.y, in_dim.x));
 }
 
 void randomizeArray(float *data, int len)

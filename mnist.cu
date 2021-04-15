@@ -1,7 +1,15 @@
 /**
- * classifier.cu
+ * mnist.cu
  * 
- * A CUDA kernel for accelerating a fully-connected neural network layer.
+ * A demo of the kernel from classifier.cu.
+ *
+ * This code reads in the weights and biases for an input layer from
+ * the file example/weights_1 and a single hidden layer from example/weights_2
+ * that have been trained for MNIST digit classification.
+ *
+ * The input image is stored in example/input_1.
+ *
+ * The first row of the weight files are the biases of the layer.
  */
 
 #include <iostream>
