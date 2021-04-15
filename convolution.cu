@@ -37,9 +37,10 @@ using namespace std;
 #define TYPE float
 #endif
 
+
 __global__
-void convolution(TYPE* X, TYPE* w, TYPE* y, int3 inDim, int4 wtsDim, int3 outDim) {
-    y[blockIdx.x + threadIdx.x] = X[blockIdx.x + threadIdx.x] * w[blockIdx.x + threadIdx.x];
+void convolution(TYPE *X, TYPE *w, TYPE *y, int3 inDim, int4 wtsDim, int3 outDim) {
+
 }
 
 int main(int argc, char **argv) {
@@ -62,18 +63,19 @@ int main(int argc, char **argv) {
     printf("Input memory size: %d bytes\n", INPUT_MEM);
     printf("Output dimensions (Nx, Ny, Nn): (%d, %d, %d)\n", OUTPUT_DIM.x, OUTPUT_DIM.y, OUTPUT_DIM.z);
     printf("Output memory size: %d bytes\n", OUTPUT_MEM);
-    printf("Weight dimensions (Kx, Ky, Ni, Nn): (%d, %d, %d, %d)\n", WEIGHTS_DIM.x, WEIGHTS_DIM.y, WEIGHTS_DIM.z, WEIGHTS_DIM.w);
+    printf("Weight dimensions (Kx, Ky, Ni, Nn): (%d, %d, %d, %d)\n",
+           WEIGHTS_DIM.x, WEIGHTS_DIM.y, WEIGHTS_DIM.z, WEIGHTS_DIM.w);
     printf("Weight memory size: %d bytes\n", WEIGHTS_MEM);
 
 
     TYPE *h_input = new TYPE[INPUT_SIZE];
     TYPE *h_weights = new TYPE[WEIGHTS_SIZE];
-    TYPE *h_output = new TYPE[INPUT_SIZE];
+    TYPE *h_output = new TYPE[OUTPUT_SIZE];
     TYPE *d_input, *d_weights, *d_output;
 
-    cudaMalloc((void**)&d_input, INPUT_MEM);
-    cudaMalloc((void**)&d_output, OUTPUT_MEM);
-    cudaMalloc((void**)&d_weights, WEIGHTS_MEM);
+    cudaMalloc((void **) &d_input, INPUT_MEM);
+    cudaMalloc((void **) &d_output, OUTPUT_MEM);
+    cudaMalloc((void **) &d_weights, WEIGHTS_MEM);
 
     randomizeArray(h_input, INPUT_SIZE);
     randomizeArray(h_weights, WEIGHTS_SIZE);
@@ -81,8 +83,8 @@ int main(int argc, char **argv) {
     cudaMemcpy(d_weights, h_weights, WEIGHTS_MEM, cudaMemcpyHostToDevice);
     cudaMemcpy(d_input, h_input, INPUT_MEM, cudaMemcpyHostToDevice);
 
-    dim3 blocksPerGrid(5, 1, 1);
-    dim3 threadsPerBlock(224, 1, 1);
+    dim3 blocksPerGrid(256, 1, 1);
+    dim3 threadsPerBlock(64, 16, 1);
 
     begin_roi();
     convolution<<<blocksPerGrid, threadsPerBlock>>>(d_input, d_weights, d_output, INPUT_DIM, WEIGHTS_DIM, OUTPUT_DIM);
@@ -95,8 +97,8 @@ int main(int argc, char **argv) {
 
     cout << "Sample output from device calculations:" << endl;
     int nonZero = 0;
-    for(int i = 0; i < OUTPUT_SIZE; i++) {
-        if(h_output[i] != 0)
+    for (int i = 0; i < OUTPUT_SIZE; i++) {
+        if (h_output[i] != 0)
             nonZero++;
     }
     cout << "Number of non-zero entries: " << nonZero << endl;
