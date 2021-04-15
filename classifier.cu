@@ -1,0 +1,78 @@
+/**
+ * classifier.cu
+ * 
+ * A CUDA kernel for accelerating a fully-connected neural network layer.
+ */
+
+#include <iostream>
+#include <string>
+
+using namespace std;
+
+#ifndef Ni
+  #define Ni 4096  
+#endif
+#ifndef Nn
+  #define Nn 1024  
+#endif
+
+/* The weights of the layer*/
+__device__ float weights[Ni][Nn];
+
+/*
+ * Matrix multiply. Performs the operation c = ab', where b' is the transpose of b.
+ */
+__device__ void mmult(float *a, float *b, float *c, int2 adim, int2 bdim)
+{
+    int row = threadIdx.x + blockIdx.x*blockDim.x;
+    int col = threadIdx.y + blockIdx.y*blockDim.y;
+
+    if(row < bdim.x && col < adim.y)
+    {
+		for(int i = 0; i < adim.y; i++)
+		{
+			c[col*bdim.x + row] += a[col*adim.x + i] * b[row*bdim.y + i];
+		}
+    }
+}
+
+__global__ void classify(float *in, float *out)
+{
+    const int2 in_dim = make_int2(Ni, 1);
+    const int2 weight_dim = make_int2(Ni, Nn);
+
+    mmult((float*)weights, in, out, weight_dim, in_dim);
+} 
+
+int main(int argc, char **argv) 
+{
+     const int in_size = sizeof(float) * Ni;  // Total size of input buffer in bytes
+     const int out_size = sizeof(float) * Nn; // Total size of output buffer in bytes
+
+     const dim3 grid_size(Nn/16,16,1);
+     const dim3 block_size(16,16,1);
+
+     float h_in_data[Ni]; // Input data on host
+     float *d_in_data;    // Input data on device
+
+     float h_out_data[Nn]; // Output on device
+     float *d_out_data;    // Output on host
+
+     cudaMalloc(&d_in_data, in_size);
+     cudaMemcpy(d_in_data, h_in_data, in_size, cudaMemcpyHostToDevice); // Give the GPU our input data.
+
+     cudaMalloc(&d_out_data, out_size);
+
+     classify<<<grid_size, block_size>>>((float*)d_in_data, (float*)d_out_data);
+
+     cudaDeviceSynchronize();
+
+     cudaMemcpy(h_out_data, d_out_data, out_size, cudaMemcpyDeviceToHost); // Retrieve the neuron outputs.
+
+     for(int i = 0; i < Nn; i++)
+    	 printf("%f ", h_out_data[i]);
+     printf("\n");
+
+    return 0;
+}
+
