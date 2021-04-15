@@ -6,9 +6,18 @@
 
 using namespace std;
 
-#define CUDA_CAP_V100 7.0
-#define SM_COUNT_2070 40
-#define CUDA_CAP_2070 7.5
+#define V100_CUDA_CAP 7.0
+#define V100_GLOBAL_MEM_TOTAL 12621381632
+#define V100_SM_COUNT 80
+#define V100_CUDA_CORES_PER_SM 64
+#define V100_CUDA_CORES_TOTAL 5120
+#define V100_L2_SIZE 4718592
+#define V100_SH_MEM_PER_BLOCK 49152
+#define V100_REGS_PER_BLOCK 65536
+#define V100_WARP_SIZE 32
+#define V100_MAX_THREADS_PER_SM 2048
+#define V100_MAX_THREADS_PER_BLOCK 1024
+
 
 //Define the parameters if not defined externally
 #ifndef Sy
@@ -16,198 +25,85 @@ using namespace std;
 #define Sx 1 // Stride in x (?)
 #endif
 
-#ifndef Tnn
-//Tiling Sizes
-#define Tnn 32
-#define Tn  16
-#define Ti  16
-
-#define Ty  8
-#define Tx  8
+#ifndef Pad
+#define Pad 1
 #endif
 
-#define NYPAD (Ny+Ky)
-#define NXPAD (Nx+Kx)
-
-#define NYSCL (Ny/Sy)
-#define NXSCL (Nx/Sx)
-
 #define SYNAPSE_SIZE (1L*Ky*Kx*Nn*Ni)
+#define Ox (Nx - Kx + 2*Pad)/(Sx + 1)
+#define Oy Ox
 
-VTYPE (*synapse)[Ky][Kx][Nn][Ni];
-VTYPE  (*neuron_i)[NYPAD][NXPAD][Ni];
-VTYPE  (*neuron_n)[NYSCL][NXSCL][Nn];
-VTYPE (*neuron_n2)[NYSCL][NXSCL][Nn];
-
+#ifndef TYPE
+#define TYPE float
+#endif
 
 __global__
-void add(int n, float *x, float *y) {
-    int index = blockIdx.x * blockDim.x + threadIdx.x;
-    y[index] = x[index] + y[index];
+void convolution(TYPE* X, TYPE* w, TYPE* y, int3 inDim, int4 wtsDim, int3 outDim) {
+    y[blockIdx.x + threadIdx.x] = X[blockIdx.x + threadIdx.x] * w[blockIdx.x + threadIdx.x];
 }
-
-
-void fill_convolution_shared_simple(float (&synapse)[Ky][Kx][Nn][Ni],
-                                    float (&neuron_i)[NYPAD][NXPAD][Ni]) {
-    for (int yy = 0; yy < Ky; ++yy) {
-        for (int xx = 0; xx < Kx; ++xx) {
-            for (int nn = 0; nn < Nn; ++nn) {
-                for (int ni = 0; ni < Ni; ++ni) {
-                    synapse[yy][xx][nn][ni] = static_cast <float> (rand()) / static_cast <float> (RAND_MAX) - 0.5f;
-                }
-            }
-        }
-    }
-
-    for (int yy = 0; yy < NYPAD; ++yy) {
-        for (int xx = 0; xx < NXPAD; ++xx) {
-            for (int ni = 0; ni < Ni; ++ni) {
-                neuron_i[yy][xx][ni] = static_cast <float> (rand()) / static_cast <float> (RAND_MAX) - 0.5f;
-            }
-        }
-    }
-}
-
-
-std::pair<int, int> convolution_layer_blocked(
-        VTYPE (&synapse)[Ky][Kx][Nn][Ni],
-        VTYPE (&neuron_i)[NYPAD][NXPAD][Ni],
-        VTYPE (&neuron_n)[NYSCL][NXSCL][Nn]) {
-    int c1 = 0, c2 = 0;
-    VTYPE sum[Nn] = {0};
-
-    for (int yy = 0; yy < Ny; yy += Ty) {
-        for (int xx = 0; xx < Nx; xx += Tx) {
-            for (int nnn = 0; nnn < Nn; nnn += Tnn) {
-                int yout = yy / Sy;
-                for (int y = yy; y < yy + Ty; y += Sy) { // tiling for y;
-                    int xout = xx / Sx;
-
-                    for (int x = xx; x < xx + Tx; x += Sx) { // tiling for x;
-
-                        for (int nn = nnn; nn < nnn + Tnn; nn += Tn) {
-                            for (int n = nn; n < nn + Tn; n++) {
-                                sum[n] = 0;
-                            }
-
-                            for (int ky = 0; ky < Ky; ky++) {  // sliding window;
-                                for (int kx = 0; kx < Kx; kx++) {
-
-                                    int ii = 0;
-                                    VTYPE sum_sc;
-
-                                    for (; ii < Ni - Ti + 1; ii += Ti) {
-                                        for (int n = nn; n < nn + Tn; n++) {
-                                            sum_sc = 0;
-                                            for (int i = ii; i < ii + Ti; i++) {
-                                                VTYPE sv = synapse[ky][kx][n][i];
-                                                VTYPE nv = neuron_i[ky + y][kx + x][i];
-                                                sum_sc += sv * nv;
-                                            }
-                                            sum[n] += sum_sc;
-                                        }
-                                    }
-                                }
-                            }
-
-                            //transfer
-                            for (int n = nn; n < nn + Tn; n++) {
-                                neuron_n[yout][xout][n] = transfer(sum[n]);
-                            }
-                        }
-                        xout++;
-                    }
-                    yout++;
-                }
-            }
-        }
-    }
-}
-
-
-//void convolution_layer(VTYPE (&synapse)[Ky][Kx][Nn][Ni],
-//                       VTYPE (&neuron_i)[NYPAD][NXPAD][Ni],
-//                       VTYPE (&neuron_n)[NYSCL][NXSCL][Nn]) {
-//    VTYPE sum[Nn] = {0};
-//    int nPrintouts = 0;
-//
-//    // — Original code — (excluding nn, ii loops)
-//    int yout = 0;
-//    for (int y = 0; y < Ny; y += Sy) { // tiling for y;
-//        int xout = 0;
-//        for (int x = 0; x < Nx; x += Sx) { // tiling for x;
-//            for (int nn = 0; nn < Nn; nn += Tn) {
-//                for (int n = nn; n < nn + Tn; n++) {
-//                    sum[n] = 0;
-//                }
-//                // sliding window;
-//                for (int ky = 0; ky < Ky; ky++)
-//                    for (int kx = 0; kx < Kx; kx++)
-//                        for (int n = nn; n < nn + Tn; n++)
-//                            for (int i = 0; i < Ni; i++) {
-//                                VTYPE sv = synapse[ky][kx][n][i];
-//                                VTYPE nv = neuron_i[ky + y][kx + x][i];
-//                                sum[n] += sv * nv;
-//
-////                                if(nPrintouts++ <= 1024 * 256) {
-////                                    printf("Input %d - Output %d - Filter x %d - Filter y %d - Image x %d - Image y %d - Tile %d\n", i, n, kx, ky, x, y, nn);
-////                                }
-//                            }
-//                for (int n = nn; n < nn + Tn; n++) {
-//                    neuron_n[yout][xout][n] = transfer(sum[n]);
-//                }
-//            }
-//            xout++;
-//        }
-//        yout++;
-//    }
-//}
-
-
-void convolution_layer(void** synapse_d, void** neuron_i_d, void** neuron_o_d) {
-    return;
-}
-
-
-
 
 int main(int argc, char **argv) {
-    int synapseMemSize = SYNAPSE_SIZE * sizeof(VTYPE);
-    int neuronInputMemSize = NYPAD * NXPAD * Ni * sizeof(VTYPE);
-    int neuronOutputMemSize = NYSCL * NXSCL * Nn * sizeof(VTYPE);
+    const int3 INPUT_DIM = make_int3(Nx, Ny, Ni);
+    const int INPUT_SIZE = Nx * Ny * Ni;
+    const int INPUT_MEM = INPUT_SIZE * sizeof(TYPE);
 
-    // Allocate host memory
-    synapse_h = (VTYPE (*)[Ky][Kx][Nn][Ni]) aligned_malloc(64, synapseMemSize);
-    neuron_i_h = (VTYPE (*)[NYPAD][NXPAD][Ni]) aligned_malloc(64, neuronInputMemSize);
-    neuron_n_h = (VTYPE (*)[NYSCL][NXSCL][Nn]) aligned_malloc(64, neuronOutputMemSize);
+    const int3 OUTPUT_DIM = make_int3(Ox, Oy, Nn);
+    const int OUTPUT_SIZE = Ox * Oy * Nn;
+    const int OUTPUT_MEM = OUTPUT_SIZE * sizeof(TYPE);
 
-    // Allocate device memory
-    VTYPE (*synapse_d)[Ky][Kx][Nn][Ni];
-    VTYPE  (*neuron_i_d)[NYPAD][NXPAD][Ni];
-    VTYPE  (*neuron_n_d)[NYSCL][NXSCL][Nn];
-    cudaMalloc((void**)&synapse_d, synapseMemSize);
-    cudaMalloc((void**)&neuron_i_d, neuronInputMemSize);
-    cudaMalloc((void**)&neuron_n_d, neuronOutputMemSize);
+    const int4 WEIGHTS_DIM = make_int4(Kx, Ky, Ni, Nn);
+    const int WEIGHTS_SIZE = Kx * Ky * Ni * Nn;
+    const int WEIGHTS_MEM = WEIGHTS_SIZE * sizeof(TYPE);
 
 
-    // Populate input and synapse with random values
-    fill_convolution_shared_simple(*synapse, *neuron_i);
+    printf("Stride (Sx, Sy): (%d, %d)\n", Sx, Sy);
+    printf("Padding: %d\n", Pad);
+    printf("Input dimensions (Nx, Ny, Ni): (%d, %d, %d)\n", INPUT_DIM.x, INPUT_DIM.y, INPUT_DIM.z);
+    printf("Input memory size: %d bytes\n", INPUT_MEM);
+    printf("Output dimensions (Nx, Ny, Nn): (%d, %d, %d)\n", OUTPUT_DIM.x, OUTPUT_DIM.y, OUTPUT_DIM.z);
+    printf("Output memory size: %d bytes\n", OUTPUT_MEM);
+    printf("Weight dimensions (Kx, Ky, Ni, Nn): (%d, %d, %d, %d)\n", WEIGHTS_DIM.x, WEIGHTS_DIM.y, WEIGHTS_DIM.z, WEIGHTS_DIM.w);
+    printf("Weight memory size: %d bytes\n", WEIGHTS_MEM);
 
-    // Copy input neuron and synapse from host to device
-    cudaMemcpy(synapse_h, synapse_d, synapseMemSize, cudaMemcpyHostToDevice);
-    cudaMemcpy(neuron_i_h, neuron_i_d, neuronInputMemSize, cudaMemcpyHostToDevice);
 
-    //Simple Version
+    TYPE *h_input = new TYPE[INPUT_SIZE];
+    TYPE *h_weights = new TYPE[WEIGHTS_SIZE];
+    TYPE *h_output = new TYPE[INPUT_SIZE];
+    TYPE *d_input, *d_weights, *d_output;
+
+    cudaMalloc((void**)&d_input, INPUT_MEM);
+    cudaMalloc((void**)&d_output, OUTPUT_MEM);
+    cudaMalloc((void**)&d_weights, WEIGHTS_MEM);
+
+    randomizeArray(h_input, INPUT_SIZE);
+    randomizeArray(h_weights, WEIGHTS_SIZE);
+
+    cudaMemcpy(d_weights, h_weights, WEIGHTS_MEM, cudaMemcpyHostToDevice);
+    cudaMemcpy(d_input, h_input, INPUT_MEM, cudaMemcpyHostToDevice);
+
+    dim3 blocksPerGrid(5, 1, 1);
+    dim3 threadsPerBlock(224, 1, 1);
+
     begin_roi();
-    convolution_layer(*synapse, *neuron_i, *neuron_n);
+    convolution<<<blocksPerGrid, threadsPerBlock>>>(d_input, d_weights, d_output, INPUT_DIM, WEIGHTS_DIM, OUTPUT_DIM);
     end_roi();
 
 
+    cudaDeviceSynchronize();
+    cudaMemcpy(h_output, d_output, OUTPUT_MEM, cudaMemcpyDeviceToHost); // Retrieve the neuron outputs.
 
 
-//    compare((VTYPE*)*neuron_n,(VTYPE*)*neuron_n2,NYSCL*NXSCL*Nn);
+    cout << "Sample output from device calculations:" << endl;
+    int nonZero = 0;
+    for(int i = 0; i < OUTPUT_SIZE; i++) {
+        if(h_output[i] != 0)
+            nonZero++;
+    }
+    cout << "Number of non-zero entries: " << nonZero << endl;
 
-    cout << "done\n";
 
+    free(h_input);
+    free(h_weights);
+    free(h_output);
     return 0;
 }
