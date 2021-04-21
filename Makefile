@@ -1,8 +1,8 @@
 CPP=g++
 NVCC=nvcc
-CFLAGS=--std=c++11
+CFLAGS=--std=c++11 -g
 
-MODULE := conv1 conv1b conv2 conv2b class1
+MODULE := conv1 conv1b conv2 conv2b class1 mnist
 
 all: $(MODULE)
 
@@ -12,7 +12,10 @@ debug: convolution.cu $(HEADERS)
 	$(NVCC) $^ $(CFLAGS) -g -G -o $@ -DNx=224 -DNy=224 -DKx=3  -DKy=3  -DNi=64  -DNn=64        -DTii=32 -DTi=16  -DTnn=32 -DTn=16 -DTx=7 -DTy=7
 
 class1: classifier.cu $(HEADERS)
-	$(NVCC) $^ $(CFLAGS) -o $@ -DNi=4096 -DNn=1024
+	$(NVCC) $^ $(CFLAGS) -o $@ -DNi=32 -DNn=16
+	
+mnist: mnist.cu $(HEADERS)
+	$(NVCC) $^ $(CFLAGS) -o $@
 
 conv1: convolution.cu $(HEADERS)
 	$(NVCC) $^ $(CFLAGS) -o $@ -DNx=224 -DNy=224 -DKx=3  -DKy=3  -DNi=64  -DNn=64 -DTii=32 -DTi=16  -DTnn=32 -DTn=16 -DTx=7 -DTy=7 -DBatch=1
