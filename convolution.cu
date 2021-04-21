@@ -1,32 +1,34 @@
-#include <iostream>
+/*
+V100_CUDA_CAP 7.0
+V100_GLOBAL_MEM_TOTAL 12621381632
+V100_SM_COUNT 80
+V100_CUDA_CORES_PER_SM 64
+V100_CUDA_CORES_TOTAL 5120
+V100_L2_SIZE 4718592
+V100_SH_MEM_PER_BLOCK 49152
+V100_REGS_PER_BLOCK 65536
+V100_WARP_SIZE 32
+V100_MAX_THREADS_PER_SM 2048
+V100_MAX_THREADS_PER_BLOCK 1024
+ */
+
 #include <string>
-#include <cuda.h>
-#include <math.h>
-#include <memory>
+#include <cmath>
 #include "dnn.h"
 
-#define Batch 1
 #define Pad 1
 #define StrideX 1
 #define StrideY 1
-
 #define NxPad (Nx + (2*Pad))
 #define NyPad (Ny + (2*Pad))
 #define Ox (((Nx - Kx + 2*Pad) / StrideX) + 1)
 #define Oy Ox
-
-#define V100_CUDA_CAP 7.0
-#define V100_GLOBAL_MEM_TOTAL 12621381632
-#define V100_SM_COUNT 80
-#define V100_CUDA_CORES_PER_SM 64
-#define V100_CUDA_CORES_TOTAL 5120
-#define V100_L2_SIZE 4718592
-#define V100_SH_MEM_PER_BLOCK 49152
-#define V100_REGS_PER_BLOCK 65536
-#define V100_WARP_SIZE 32
-#define V100_MAX_THREADS_PER_SM 2048
-#define V100_MAX_THREADS_PER_BLOCK 1024
-
+#define I_SIZE (Ni * NyPad * NxPad)
+#define O_SIZE (Nn * Oy * Ox)
+#define F_SIZE (Nn * Ni * Ky * Kx)
+#define I_MEM_SIZE (I_SIZE * sizeof(float))
+#define O_MEM_SIZE (O_SIZE * sizeof(float))
+#define F_MEM_SIZE (F_SIZE * sizeof(float))
 #define gpuErrchk(ans) { gpuAssert((ans), __FILE__, __LINE__); }
 
 using namespace std;
@@ -38,6 +40,12 @@ inline void gpuAssert(cudaError_t code, const char *file, int line, bool abort =
     }
 }
 
+__global__ void convolution();
+
+__host__ void randomizeFilters();
+__host__ void randomizeInput();
+__host__ void padInput();
+__host__ void printParameters();
 
 __device__ float d_input[Ni][NyPad][NxPad];
 __device__ float d_output[Nn][Oy][Ox];
@@ -47,27 +55,8 @@ float h_input[Ni][NyPad][NxPad];
 float h_output[Nn][Oy][Ox];
 float h_filters[Nn][Ni][Ky][Kx];
 
-bool DEBUG = true;
-
-__global__ void convolution();
-__host__ void randomizeFilters();
-__host__ void randomizeInput();
-__host__ void padInput();
-
-
-
-
 int main(int argc, char **argv) {
-    // Input, output, and filter size (N elements)
-    const int I_SIZE = Ni * NyPad * NxPad;
-    const int O_SIZE = Nn * Oy * Ox;
-    const int F_SIZE = Nn * Ni * Ky * Kx;
-
-    // Input, output, and filter size in memory
-    const int I_MEM_SIZE = I_SIZE * sizeof(float);
-    const int O_MEM_SIZE = O_SIZE * sizeof(float);
-    const int F_MEM_SIZE = F_SIZE * sizeof(float);
-
+    bool DEBUG = ((argc > 1) && (std::string(argv[1]) == "--debug"));
 
     dim3 blocksPerGrid(Ox, Oy, Nn);
     dim3 threadsPerBlock(Kx, Ky, 64);
@@ -77,82 +66,56 @@ int main(int argc, char **argv) {
     randomizeInput();
     padInput();
 
-
     if (DEBUG) {
-        printf("\n\n");
-        printf("Padding: %d\n", Pad);
-        printf("Stride (StrideX, StrideY): (%d, %d)\n", StrideX, StrideY);
-
-        printf("\n\n");
-        printf("Input dimensions (Nx, Ny, Ni): (%d, %d, %d)\n", Nx, Ny, Ni);
-        printf("Input dimensions with Pad (Nx+%d, Ny+%d, Ni): (%d, %d, %d)\n", (2 * Pad), (2 * Pad), NxPad, NyPad,
-               Ni);
-        printf("Input number of elements: %dx%dx%d = %d\n", Nx, Ny, Ni, Nx * Ny * Ni);
-        printf("Input memory size: %d bytes\n", I_MEM_SIZE);
-
-        printf("\n\n");
-        printf("Output dimensions (Ox, Oy, Nn): (%d, %d, %d)\n", Ox, Oy, Nn);
-        printf("Output number of elements: %dx%dx%d = %d\n", Ox, Oy, Nn, Ox * Oy * Nn);
-        printf("Output memory size: %d bytes\n", O_MEM_SIZE);
-
-        printf("\n\n");
-        printf("Weights dimensions (Kx, Ky, Ni, Nn): (%d, %d, %d, %d)\n", Kx, Ky, Ni, Nn);
-        printf("Weights number of elements: %dx%dx%dx%d = %d\n", Kx, Ky, Ni, Nn, Kx * Ky * Ni * Nn);
-        printf("Weights memory size: %d bytes\n", F_MEM_SIZE);
-
+        printParameters();
         printf("\n\n");
         printf("Blocks-Per-Grid: (%d, %d, %d)\n", blocksPerGrid.x, blocksPerGrid.y, blocksPerGrid.z);
-        printf("Threads-Per-Block: (%d, %d, %d)\n", threadsPerBlock.x, threadsPerBlock.y, threadsPerBlock.z);
-        printf("\n\n");
+        printf("Threads-Per-Block: (%d, %d, %d)\n\n\n", threadsPerBlock.x, threadsPerBlock.y, threadsPerBlock.z);
+
+        int nonZero = 0;
+        for (auto & nn : h_output)
+            for (auto & oy : nn)
+                for (float ox : oy)
+                    if (ox != 0)
+                        nonZero++;
+        printf("Number of non-zero elements in h_output: %d\n", nonZero);
     }
 
-    int nonZero = 0;
-    for (int nn = 0; nn < Nn; nn++)
-        for (int oy = 0; oy < Oy; oy++)
-            for (int ox = 0; ox < Ox; ox++)
-                if (h_output[nn][oy][ox] != 0)
-                    nonZero++;
-    printf("Number of non-zero elements in h_output: %d\n", nonZero);
-
-
-    // Begin GPU operations
+    // Copy filters and input : host -> device
     gpuErrchk(cudaMemcpyToSymbol(d_filters, h_filters, F_MEM_SIZE));
     gpuErrchk(cudaMemcpyToSymbol(d_input, h_input, I_MEM_SIZE));
 
+    // Start timer and execute kernel
     begin_roi();
     convolution<<<blocksPerGrid, threadsPerBlock>>>();
-    gpuErrchk(cudaPeekAtLastError());
     gpuErrchk(cudaDeviceSynchronize());
     end_roi();
 
-
+    // Copy output : device -> host
     gpuErrchk(cudaMemcpyFromSymbol(h_output, d_output, O_MEM_SIZE));
 
-    nonZero = 0;
-    for (int nn = 0; nn < Nn; nn++)
-        for (int oy = 0; oy < Oy; oy++)
-            for (int ox = 0; ox < Ox; ox++)
-                if (h_output[nn][oy][ox] != 0)
-                    nonZero++;
-    printf("Number of non-zero elements in h_output: %d\n", nonZero);
+    // Check output
+    if (DEBUG) {
+        int nonZero = 0;
+        for (auto & nn : h_output)
+            for (auto & oy : nn)
+                for (float ox : oy)
+                    if (ox != 0)
+                        nonZero++;
+        printf("Number of non-zero elements in h_output: %d\n", nonZero);
+    }
 
     return 0;
 }
 
-
-
-
-
-
-
 __global__
 void convolution() {
-    int ox = blockIdx.x;
-    int oy = blockIdx.y;
-    int nn = blockIdx.z;
-    int kx = threadIdx.x;
-    int ky = threadIdx.y;
-    int ni = threadIdx.z;
+    unsigned int ox = blockIdx.x;
+    unsigned int oy = blockIdx.y;
+    unsigned int nn = blockIdx.z;
+    unsigned int kx = threadIdx.x;
+    unsigned int ky = threadIdx.y;
+    unsigned int ni = threadIdx.z;
 
 
     // TODO Account for larger input (Ni)
@@ -176,114 +139,7 @@ void convolution() {
         for (int in_chunk = 0; in_chunk < Ni / 64; in_chunk++) {
             atomicAdd(&d_output[nn][oy][ox], sum[in_chunk * 64 + ni]);
         }
-
-
-//    for (int ny = ny_start; ny < ny_end; ny++)
-//        for (int nx = nx_start; nx < nx_end; nx++)
-//                d_output[nn][oy][ox] += d_input[ni][ny][nx] * d_filters[nn][ni][ky][kx];
-
-//            d_output[nn][oy][ox] =     in[ni][ny][nx] * filt[nn][ni][ky][kx]
-//            d_output[0][0][0] =     in[0][0][0] * filt[0][0][0][0]
-//                                +   in[0][0][1] * filt[0][0][0][1]
-//                                +   in[0][0][2] * filt[0][0][0][2]
-//                                +   in[0][1][0] * filt[0][0][1][0]
-//                                +   in[0][1][1] * filt[0][0][1][1]
-//                                +   in[0][1][2] * filt[0][0][1][2]
-//                                +   in[0][2][0] * filt[0][0][2][0]
-//                                +   in[0][2][1] * filt[0][0][2][1]
-//                                +   in[0][2][2] * filt[0][0][2][2]
-//                                +   in[1][0][0] * filt[0][1][0][0]
-//                                +   in[1][0][1] * filt[0][1][0][1]
-//                                +   in[1][0][2] * filt[0][1][0][2]
-//                                +   in[1][1][0] * filt[0][1][1][0]
-//                                +   in[1][1][1] * filt[0][1][1][1]
-//                                +   in[1][1][2] * filt[0][1][1][2]
-//                                +   in[1][2][0] * filt[0][1][2][0]
-//                                +   in[1][2][1] * filt[0][1][2][1]
-//                                +   in[1][2][2] * filt[0][1][2][2]
-//                                ...
-//                                ...
-//                                ...
-//                                +   in[63][0][0] * filt[0][63][0][0]
-//                                +   in[63][0][1] * filt[0][63][0][1]
-//                                +   in[63][0][2] * filt[0][63][0][2]
-//                                +   in[63][1][0] * filt[0][63][1][0]
-//                                +   in[63][1][1] * filt[0][63][1][1]
-//                                +   in[63][1][2] * filt[0][63][1][2]
-//                                +   in[63][2][0] * filt[0][63][2][0]
-//                                +   in[63][2][1] * filt[0][63][2][1]
-//                                +   in[63][2][2] * filt[0][63][2][2]
-//
-//        d_output[0][0][1] =         in[0][0][1] * filt[0][0][0][0]
-//                                +   in[0][0][2] * filt[0][0][0][1]
-//                                +   in[0][0][3] * filt[0][0][0][2]
-//                                +   in[0][1][1] * filt[0][0][1][0]
-//                                +   in[0][1][2] * filt[0][0][1][1]
-//                                +   in[0][1][3] * filt[0][0][1][2]
-//                                +   in[0][2][1] * filt[0][0][2][0]
-//                                +   in[0][2][2] * filt[0][0][2][1]
-//                                +   in[0][2][3] * filt[0][0][2][2]
-//                                +   in[1][0][1] * filt[0][1][0][0]
-//                                +   in[1][0][2] * filt[0][1][0][1]
-//                                +   in[1][0][3] * filt[0][1][0][2]
-//                                +   in[1][1][1] * filt[0][1][1][0]
-//                                +   in[1][1][2] * filt[0][1][1][1]
-//                                +   in[1][1][3] * filt[0][1][1][2]
-//                                +   in[1][2][1] * filt[0][1][2][0]
-//                                +   in[1][2][2] * filt[0][1][2][1]
-//                                +   in[1][2][3] * filt[0][1][2][2]
-//                                ...
-//                                ...
-//                                ...
-//                                +   in[63][0][1] * filt[0][63][0][0]
-//                                +   in[63][0][2] * filt[0][63][0][1]
-//                                +   in[63][0][3] * filt[0][63][0][2]
-//                                +   in[63][1][1] * filt[0][63][1][0]
-//                                +   in[63][1][2] * filt[0][63][1][1]
-//                                +   in[63][1][3] * filt[0][63][1][2]
-//                                +   in[63][2][1] * filt[0][63][2][0]
-//                                +   in[63][2][2] * filt[0][63][2][1]
-//                                +   in[63][2][3] * filt[0][63][2][2]
-//
-//        d_output[1][0][0] =         in[0][0][0] * filt[1][0][0][0]
-//                                +   in[0][0][1] * filt[1][0][0][1]
-//                                +   in[0][0][2] * filt[1][0][0][2]
-//                                +   in[0][1][0] * filt[1][0][1][0]
-//                                +   in[0][1][1] * filt[1][0][1][1]
-//                                +   in[0][1][2] * filt[1][0][1][2]
-//                                +   in[0][2][0] * filt[1][0][2][0]
-//                                +   in[0][2][1] * filt[1][0][2][1]
-//                                +   in[0][2][2] * filt[1][0][2][2]
-//                                +   in[1][0][0] * filt[1][1][0][0]
-//                                +   in[1][0][1] * filt[1][1][0][1]
-//                                +   in[1][0][2] * filt[1][1][0][2]
-//                                +   in[1][1][0] * filt[1][1][1][0]
-//                                +   in[1][1][1] * filt[1][1][1][1]
-//                                +   in[1][1][2] * filt[1][1][1][2]
-//                                +   in[1][2][0] * filt[1][1][2][0]
-//                                +   in[1][2][1] * filt[1][1][2][1]
-//                                +   in[1][2][2] * filt[1][1][2][2]
-//                                ...
-//                                ...
-//                                ...
-//                                +   in[63][0][0] * filt[1][63][0][0]
-//                                +   in[63][0][1] * filt[1][63][0][1]
-//                                +   in[63][0][2] * filt[1][63][0][2]
-//                                +   in[63][1][0] * filt[1][63][1][0]
-//                                +   in[63][1][1] * filt[1][63][1][1]
-//                                +   in[63][1][2] * filt[1][63][1][2]
-//                                +   in[63][2][0] * filt[1][63][2][0]
-//                                +   in[63][2][1] * filt[1][63][2][1]
-//                                +   in[63][2][2] * filt[1][63][2][2]
-//
-//    d_output[nn][oy][ox] = d_input[ni][ny][nx] * d_filters[nn][ni][ky][kx];
 }
-
-
-
-
-
-
 
 __host__
 void randomizeFilters() {
@@ -315,4 +171,28 @@ void padInput() {
             h_input[z][y][NxPad - 1] = 0;
         }
     }
+}
+
+__host__
+void printParameters() {
+    printf("\n\n");
+    printf("Padding: %d\n", Pad);
+    printf("Stride (StrideX, StrideY): (%d, %d)\n", StrideX, StrideY);
+
+    printf("\n\n");
+    printf("Input dimensions (Nx, Ny, Ni): (%d, %d, %d)\n", Nx, Ny, Ni);
+    printf("Input dimensions with Pad (Nx+%d, Ny+%d, Ni): (%d, %d, %d)\n", (2 * Pad), (2 * Pad), NxPad, NyPad,
+           Ni);
+    printf("Input number of elements: %dx%dx%d = %d\n", Nx, Ny, Ni, Nx * Ny * Ni);
+    printf("Input memory size: %lu bytes\n", I_MEM_SIZE);
+
+    printf("\n\n");
+    printf("Output dimensions (Ox, Oy, Nn): (%d, %d, %d)\n", Ox, Oy, Nn);
+    printf("Output number of elements: %dx%dx%d = %d\n", Ox, Oy, Nn, Ox * Oy * Nn);
+    printf("Output memory size: %lu bytes\n", O_MEM_SIZE);
+
+    printf("\n\n");
+    printf("Weights dimensions (Kx, Ky, Ni, Nn): (%d, %d, %d, %d)\n", Kx, Ky, Ni, Nn);
+    printf("Weights number of elements: %dx%dx%dx%d = %d\n", Kx, Ky, Ni, Nn, Kx * Ky * Ni * Nn);
+    printf("Weights memory size: %lu bytes\n", F_MEM_SIZE);
 }
