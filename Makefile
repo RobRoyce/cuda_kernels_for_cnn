@@ -1,6 +1,6 @@
 CPP=g++
 NVCC=nvcc
-CFLAGS=--std=c++11 -g
+CFLAGS=-arch=sm_70 -DCUDA_ARCH_BIN=7.0 -std=c++11 -g
 
 MODULE := conv1 conv1b conv2 conv2b class1 mnist
 

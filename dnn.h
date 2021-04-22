@@ -10,6 +10,13 @@
 #include <stdlib.h>
 #include <sys/time.h>
 #include "cuda.h"
+#if !(__CUDA_ARCH__ >= 700 || !defined(__CUDA_ARCH__) )
+    static inline  __device__ void atomicAdd(half *address, half val) {
+       unsigned int * address_as_ui = (unsigned int *) ((char *)address - ((size_t)address & 2));
+    static inline  __device__ void atomicAdd(half *address, half val) {
+        } while (assumed != old);
+     }
+#endif
 
 #define VTYPE float
 

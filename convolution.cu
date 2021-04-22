@@ -15,7 +15,10 @@ V100_MAX_THREADS_PER_BLOCK 1024
 #include <string>
 #include <cmath>
 #include "dnn.h"
+#include "cuda_fp16.h"
 
+//typedef __half TYPE;
+#define TYPE __half
 #define Pad 1
 #define StrideX 1
 #define StrideY 1
@@ -26,9 +29,9 @@ V100_MAX_THREADS_PER_BLOCK 1024
 #define I_SIZE (Ni * NyPad * NxPad)
 #define O_SIZE (Nn * Oy * Ox)
 #define F_SIZE (Nn * Ni * Ky * Kx)
-#define I_MEM_SIZE (I_SIZE * sizeof(float))
-#define O_MEM_SIZE (O_SIZE * sizeof(float))
-#define F_MEM_SIZE (F_SIZE * sizeof(float))
+#define I_MEM_SIZE (I_SIZE * sizeof(TYPE))
+#define O_MEM_SIZE (O_SIZE * sizeof(TYPE))
+#define F_MEM_SIZE (F_SIZE * sizeof(TYPE))
 #define gpuErrchk(ans) { gpuAssert((ans), __FILE__, __LINE__); }
 
 using namespace std;
@@ -41,19 +44,21 @@ inline void gpuAssert(cudaError_t code, const char *file, int line, bool abort =
 }
 
 __global__ void convolution(int);
+__global__ void half_plus1(__half *);
+
 
 __host__ void randomizeFilters();
 __host__ void randomizeInput();
 __host__ void padInput();
 __host__ void printParameters();
 
-__device__ float d_input[Batch][Ni][NyPad][NxPad];
-__device__ float d_output[Nn][Oy][Ox];
-__device__ float d_filters[Nn][Ni][Ky][Kx];
+__device__ TYPE d_input[Batch][Ni][NyPad][NxPad];
+__device__ TYPE d_output[Nn][Oy][Ox];
+__device__ TYPE d_filters[Nn][Ni][Ky][Kx];
 
-float h_input[Batch][Ni][NyPad][NxPad];
-float h_output[Nn][Oy][Ox];
-float h_filters[Nn][Ni][Ky][Kx];
+TYPE h_input[Batch][Ni][NyPad][NxPad];
+TYPE h_output[Nn][Oy][Ox];
+TYPE h_filters[Nn][Ni][Ky][Kx];
 
 int main(int argc, char **argv) {
     bool DEBUG = ((argc > 1) && (std::string(argv[1]) == "--debug"));
@@ -75,8 +80,8 @@ int main(int argc, char **argv) {
         int nonZero = 0;
         for (auto & nn : h_output)
             for (auto & oy : nn)
-                for (float ox : oy)
-                    if (ox != 0)
+                for (__half ox : oy)
+                    if (__half2float(ox) != 0)
                         nonZero++;
         printf("Number of non-zero elements in h_output: %d\n", nonZero);
     }
@@ -101,13 +106,18 @@ int main(int argc, char **argv) {
         int nonZero = 0;
         for (auto & nn : h_output)
             for (auto & oy : nn)
-                for (float ox : oy)
-                    if (ox != 0)
+                for (TYPE ox : oy)
+                    if (__half2float(ox) != 0)
                         nonZero++;
         printf("Number of non-zero elements in h_output: %d\n", nonZero);
     }
 
     return 0;
+}
+
+__device__
+void atomicPartialSum(__half *dest, __half value) {
+    atomicAdd(dest, value);
 }
 
 __global__
@@ -121,25 +131,28 @@ void convolution(int batch) {
 
 
     // TODO Account for larger input (Ni)
-    __shared__ float sum[Ni];
-    float value;
+    __shared__ TYPE sum[Ni];
+    TYPE value;
 
     if (kx == 0 && ky == 0 && ni == 0)
         for (int i = 0; i < Ni; i++)
-            sum[i] = 0;
+            sum[i] = 0.0;
 
     __syncthreads();
 
     for (int in_chunk = 0; in_chunk < Ni / 64; in_chunk++) {
-        value = d_input[batch][in_chunk * 64 + ni][oy + ky][ox + kx] * d_filters[nn][in_chunk * 64 + ni][ky][kx];
+        value = __hmul(d_input[batch][in_chunk * 64 + ni][oy + ky][ox + kx], d_filters[nn][in_chunk * 64 + ni][ky][kx]);
+        value = __hadd(sum[in_chunk * 64 + ni], value);
         atomicAdd(&sum[in_chunk * 64 + ni], value);
+
     }
 
     __syncthreads();
 
     if (kx == 0 && ky == 0)
         for (int in_chunk = 0; in_chunk < Ni / 64; in_chunk++) {
-            atomicAdd(&d_output[nn][oy][ox], sum[in_chunk * 64 + ni]);
+            value = __hadd(d_output[nn][oy][ox], sum[in_chunk * 64 + ni]);
+            atomicAdd(&d_output[nn][oy][ox], value);
         }
 }
 
@@ -149,7 +162,7 @@ void randomizeFilters() {
         for (int xx = 0; xx < Kx; ++xx)
             for (int nn = 0; nn < Nn; ++nn)
                 for (int ni = 0; ni < Ni; ++ni)
-                    h_filters[nn][ni][yy][xx] = static_cast <float> (rand()) / static_cast <float> (RAND_MAX) - 0.5f;
+                    h_filters[nn][ni][yy][xx] = __float2half(static_cast <float> (rand()) / static_cast <float> (RAND_MAX) - 0.5f);
 }
 
 __host__
@@ -158,7 +171,7 @@ void randomizeInput() {
         for (int ni = 0; ni < Ni; ++ni)
             for (int yy = 0; yy < NyPad; ++yy)
                 for (int xx = 0; xx < NxPad; ++xx)
-                    h_input[batch][ni][yy][xx] = static_cast <float> (rand()) / static_cast <float> (RAND_MAX) - 0.5f;
+                    h_input[batch][ni][yy][xx] = __float2half(static_cast <float> (rand()) / static_cast <float> (RAND_MAX) - 0.5f);
 }
 
 __host__
