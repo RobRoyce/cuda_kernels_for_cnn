@@ -40,18 +40,18 @@ inline void gpuAssert(cudaError_t code, const char *file, int line, bool abort =
     }
 }
 
-__global__ void convolution();
+__global__ void convolution(int);
 
 __host__ void randomizeFilters();
 __host__ void randomizeInput();
 __host__ void padInput();
 __host__ void printParameters();
 
-__device__ float d_input[Ni][NyPad][NxPad];
+__device__ float d_input[Batch][Ni][NyPad][NxPad];
 __device__ float d_output[Nn][Oy][Ox];
 __device__ float d_filters[Nn][Ni][Ky][Kx];
 
-float h_input[Ni][NyPad][NxPad];
+float h_input[Batch][Ni][NyPad][NxPad];
 float h_output[Nn][Oy][Ox];
 float h_filters[Nn][Ni][Ky][Kx];
 
@@ -82,12 +82,14 @@ int main(int argc, char **argv) {
     }
 
     // Copy filters and input : host -> device
+    gpuErrchk(cudaMemcpyToSymbol(d_input, h_input, I_MEM_SIZE * Batch));
     gpuErrchk(cudaMemcpyToSymbol(d_filters, h_filters, F_MEM_SIZE));
-    gpuErrchk(cudaMemcpyToSymbol(d_input, h_input, I_MEM_SIZE));
+
 
     // Start timer and execute kernel
     begin_roi();
-    convolution<<<blocksPerGrid, threadsPerBlock>>>();
+    for (int batch = 0; batch < Batch; batch++)
+        convolution<<<blocksPerGrid, threadsPerBlock>>>(batch);
     gpuErrchk(cudaDeviceSynchronize());
     end_roi();
 
@@ -109,7 +111,7 @@ int main(int argc, char **argv) {
 }
 
 __global__
-void convolution() {
+void convolution(int batch) {
     unsigned int ox = blockIdx.x;
     unsigned int oy = blockIdx.y;
     unsigned int nn = blockIdx.z;
@@ -129,7 +131,7 @@ void convolution() {
     __syncthreads();
 
     for (int in_chunk = 0; in_chunk < Ni / 64; in_chunk++) {
-        value = d_input[in_chunk * 64 + ni][oy + ky][ox + kx] * d_filters[nn][in_chunk * 64 + ni][ky][kx];
+        value = d_input[batch][in_chunk * 64 + ni][oy + ky][ox + kx] * d_filters[nn][in_chunk * 64 + ni][ky][kx];
         atomicAdd(&sum[in_chunk * 64 + ni], value);
     }
 
@@ -152,25 +154,27 @@ void randomizeFilters() {
 
 __host__
 void randomizeInput() {
-    for (int ni = 0; ni < Ni; ++ni)
-        for (int yy = 0; yy < NyPad; ++yy)
-            for (int xx = 0; xx < NxPad; ++xx)
-                h_input[ni][yy][xx] = static_cast <float> (rand()) / static_cast <float> (RAND_MAX) - 0.5f;
+    for (int batch = 0; batch < Batch; batch++)
+        for (int ni = 0; ni < Ni; ++ni)
+            for (int yy = 0; yy < NyPad; ++yy)
+                for (int xx = 0; xx < NxPad; ++xx)
+                    h_input[batch][ni][yy][xx] = static_cast <float> (rand()) / static_cast <float> (RAND_MAX) - 0.5f;
 }
 
 __host__
 void padInput() {
     // Set padded regions to 0
-    for (int z = 0; z < Ni; z++) {
-        for (int x = 0; x < NxPad; x++) {
-            h_input[z][0][x] = 0;
-            h_input[z][NyPad - 1][x] = 0;
+    for (int batch = 0; batch < Batch; batch++)
+        for (int z = 0; z < Ni; z++) {
+            for (int x = 0; x < NxPad; x++) {
+                h_input[batch][z][0][x] = 0;
+                h_input[batch][z][NyPad - 1][x] = 0;
+            }
+            for (int y = 0; y < NyPad; y++) {
+                h_input[batch][z][y][0] = 0;
+                h_input[batch][z][y][NxPad - 1] = 0;
+            }
         }
-        for (int y = 0; y < NyPad; y++) {
-            h_input[z][y][0] = 0;
-            h_input[z][y][NxPad - 1] = 0;
-        }
-    }
 }
 
 __host__
