@@ -12,7 +12,10 @@ debug: convolution.cu $(HEADERS)
 	$(NVCC) $^ $(CFLAGS) -g -G -o $@ -DNx=224 -DNy=224 -DKx=3  -DKy=3  -DNi=64  -DNn=64        -DTii=32 -DTi=16  -DTnn=32 -DTn=16 -DTx=7 -DTy=7
 
 class1: classifier.cu $(HEADERS)
-	$(NVCC) $^ $(CFLAGS) -o $@ -DNi=32 -DNn=16
+	$(NVCC) $^ $(CFLAGS) -o $@ -DNi=25088 -DNn=4096 -DNb=1
+	
+class2: classifier.cu $(HEADERS)
+	$(NVCC) $^ $(CFLAGS) -o $@ -DNi=4096 -DNn=1024 -DNb=1
 	
 mnist: mnist.cu $(HEADERS)
 	$(NVCC) $^ $(CFLAGS) -o $@
