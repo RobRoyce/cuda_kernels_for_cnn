@@ -132,14 +132,14 @@ void convolution(int batch) {
 
     for (int in_chunk = 0; in_chunk < Ni / 64; in_chunk++) {
         value = d_input[batch][in_chunk * 64 + ni][oy + ky][ox + kx] * d_filters[nn][in_chunk * 64 + ni][ky][kx];
-        atomicAdd_block(&sum[in_chunk * 64 + ni], value);
+        atomicAdd(&sum[in_chunk * 64 + ni], value);
     }
 
     __syncthreads();
 
     if (kx == 0 && ky == 0)
         for (int in_chunk = 0; in_chunk < Ni / 64; in_chunk++) {
-            atomicAdd_block(&d_output[nn][oy][ox], sum[in_chunk * 64 + ni]);
+            atomicAdd(&d_output[nn][oy][ox], sum[in_chunk * 64 + ni]);
         }
 }
 
