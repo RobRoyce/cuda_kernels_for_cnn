@@ -125,17 +125,18 @@ void convolution(int batch) {
     unsigned int ky = threadIdx.y;
     unsigned int ni = threadIdx.z;
 
-
-    // TODO Account for larger input (Ni)
     __shared__ float sum[Ni];
     float value;
 
+    // Use the first thread of each block to set accum. to 0
     if (kx == 0 && ky == 0 && ni == 0)
         for (int i = 0; i < Ni; i++)
             sum[i] = 0;
 
+    // Wait until accum. is initialized
     __syncthreads();
 
+    // Multiply-Accumulate
     for (int in_chunk = 0; in_chunk < Ni / 64; in_chunk++) {
         value = d_input[batch][in_chunk * 64 + ni][oy + ky][ox + kx] * d_filters[nn][in_chunk * 64 + ni][ky][kx];
         atomicAdd(&sum[in_chunk * 64 + ni], value);
@@ -143,6 +144,7 @@ void convolution(int batch) {
 
     __syncthreads();
 
+    // Store results
     if (kx == 0 && ky == 0)
         for (int in_chunk = 0; in_chunk < Ni / 64; in_chunk++) {
             atomicAdd(&d_output[nn][oy][ox], sum[in_chunk * 64 + ni]);
