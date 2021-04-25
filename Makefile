@@ -1,15 +1,12 @@
 CPP=g++
 NVCC=nvcc
-CFLAGS=--std=c++11 -g
+CFLAGS=--std=c++11 -g --default-stream per-thread
 
 MODULE := conv1 conv1b conv2 conv2b class1 class1b class2 class2b mnist diannao_conv1 diannao_conv2 diannao_class1 diannao_class2
 
 all: $(MODULE)
 
 HEADERS=
-
-debug: convolution.cu $(HEADERS)
-	$(NVCC) $^ $(CFLAGS) -g -G -o $@ -DNx=224 -DNy=224 -DKx=3  -DKy=3  -DNi=64  -DNn=64        -DTii=32 -DTi=16  -DTnn=32 -DTn=16 -DTx=7 -DTy=7
 
 class1: classifier.cu $(HEADERS)
 	$(NVCC) $^ $(CFLAGS) -o $@ -DNi=25088 -DNn=4096 -DNb=1
@@ -22,7 +19,7 @@ class2: classifier.cu $(HEADERS)
 
 class2b: classifier.cu $(HEADERS)
 	$(NVCC) $^ $(CFLAGS) -o $@ -DNi=4096 -DNn=1024 -DNb=16
-	
+
 mnist: mnist.cu $(HEADERS)
 	$(NVCC) $^ $(CFLAGS) -o $@
 
@@ -52,3 +49,6 @@ diannao_class2: diannao_class.cu $(HEADERS)
 
 clean:
 	rm -f $(MODULE)
+
+test:
+	. tests/nvprof_metrics.sh
