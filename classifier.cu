@@ -19,53 +19,112 @@ using namespace std;
   #define Nb 1
 #endif
 
-#define DEBUG false
+#define DEBUG (false)
 
 /* The weights of the layer*/
-__device__ float d_weights[Ni*Nn];
+__device__ float d_weights[Nn][Ni];
+__device__ float d_inputs[Ni][Nb];
+__device__ float d_outputs[Nn][Nb];
 
-/*
- * Matrix multiply. Performs the operation c = b'a, where b' is the transpose of b.
- */
-__device__ void mmult(float *a, float *b, float *c, int2 adim, int2 bdim)
+#define BLK_SZ (16)
+
+/* Performs a matrix multiply. Assumes kernel block size is (BLK_SZ, BLK_SZ, 1)*/
+__device__ void matmul_blk(float a[BLK_SZ][BLK_SZ], float b[BLK_SZ][BLK_SZ], float c[BLK_SZ][BLK_SZ])
 {
-    int row = threadIdx.x + blockIdx.x*blockDim.x;
-    int col = threadIdx.y + blockIdx.y*blockDim.y;
+    const int row = threadIdx.x;
+    const int col = threadIdx.y;
 
-    if(adim.y != bdim.y)
-    {
-    	if(row == 0 & col == 0)
-    	{
-    		printf("Error: Incompatible matrix dimensions: [%dx%d] * [%dx%d]\n", adim.y, adim.x, bdim.x, bdim.y);
-    	}
-    }
-
-    if(row < adim.x && col < bdim.x)
-    {
-		for(int i = 0; i < adim.y; i++)
-		{
-			c[row*bdim.x + col] += a[row*adim.y + i] * b[col*adim.y + i];
-		}
-    }
+	for(int i = 0; i < BLK_SZ; i++)
+	{
+		c[row][col] += a[row][i] * b[i][col];
+	}
 }
 
-__device__ void relu(float *mtx, int2 dim)
+/* Performs C = A + B. Assumes kernel block size is (BLK_SZ, BLK_SZ, 1)*/
+__device__ void matadd_blk(float a[BLK_SZ][BLK_SZ], float b[BLK_SZ][BLK_SZ], float c[BLK_SZ][BLK_SZ])
 {
-    int row = threadIdx.x + blockIdx.x*blockDim.x;
-    int col = threadIdx.y + blockIdx.y*blockDim.y;
+    const int row = threadIdx.x;
+    const int col = threadIdx.y;
 
-    if(row < dim.x && col < dim.y)
-    {
-			mtx[col*dim.x + row] *= (mtx[col*dim.x + row] > 0);
-    }
+    c[row][col] = a[row][col] + b[row][col];
 }
 
-__global__ void classify(float *in, float *out, int2 in_dim)
+__device__ void matadd_blk_global(float *dst, int2 dstDim, float mat[BLK_SZ][BLK_SZ], int blkX, int blkY)
 {
-    const int2 weight_dim = make_int2(Nn, Ni);
+    const int row = threadIdx.x;
+    const int col = threadIdx.y;
 
-    mmult(d_weights, in, out, weight_dim, in_dim);
-    //relu(out, make_int2(weight_dim.y, in_dim.x));
+    atomicAdd(&dst[dstDim.y*(BLK_SZ*blkX + row) + (BLK_SZ*blkY + col)], mat[row][col]);
+}
+
+__device__ void matread_blk(float *src, int2 srcDim, float mat[BLK_SZ][BLK_SZ], int blkX, int blkY)
+{
+    const int row = threadIdx.x;
+    const int col = threadIdx.y;
+
+    const int idx = srcDim.y*(BLK_SZ*blkX + row) + (BLK_SZ*blkY + col);
+    if(idx >= (srcDim.x * srcDim.y))
+    {
+    	printf("bounds error srcDim=(%d,%d) (%d,%d) block (%d,%d): %d\n", srcDim.x, srcDim.y, row, col, blkX, blkY, idx);
+    }
+
+    mat[row][col] = src[idx];
+}
+
+__device__ void matwrite_blk(float *dst, int2 srcDim, float mat[BLK_SZ][BLK_SZ], int blkX, int blkY)
+{
+    const int row = threadIdx.x;
+    const int col = threadIdx.y;
+
+    dst[srcDim.y*(BLK_SZ*blkX + row) + (BLK_SZ*blkY + col)] = mat[row][col];
+}
+
+__device__ void blk_zero(float mat[BLK_SZ][BLK_SZ])
+{
+    const int row = threadIdx.x;
+    const int col = threadIdx.y;
+
+    mat[row][col] = 0;
+}
+
+__device__ void printBlock(float mat[BLK_SZ][BLK_SZ], int blkX, int blkY)
+{
+	if(blockIdx.x == blkX && blockIdx.y == blkY)
+	{
+		printf("mat[%d][%d] = %f\n", threadIdx.x, threadIdx.y, mat[threadIdx.x][threadIdx.y]);
+	}
+}
+
+__global__ void classify()
+{
+    const int2 weightDim = make_int2(Nn, Ni);
+    const int2 inDim = make_int2(Ni, Nb);
+    const int2 outDim = make_int2(Nn, Nb);
+
+    const int blkX = blockIdx.x;
+    const int blkY = blockIdx.y;
+
+    __shared__ float weightBlk[BLK_SZ][BLK_SZ];
+    __shared__ float inBlk[BLK_SZ][BLK_SZ];
+    __shared__ float outBlk[BLK_SZ][BLK_SZ];
+
+    matread_blk((float*)d_inputs, inDim, inBlk, blkX, blkY);
+
+    for(int i = 0; i < (weightDim.x / BLK_SZ); i++)
+    {
+        matread_blk((float*)d_weights, weightDim, weightBlk, i, blkX);
+        blk_zero(outBlk);
+
+
+        //__threadfence();
+
+        matmul_blk(weightBlk, inBlk, outBlk);
+
+        //__threadfence();
+
+        matadd_blk_global((float*)d_outputs, outDim, outBlk, i, blkY);
+
+    }
 }
 
 void randomizeArray(float *data, int len)
@@ -78,21 +137,17 @@ void randomizeArray(float *data, int len)
 
 int main(int argc, char **argv) 
 {
-     const int2 in_dim = make_int2(Nb, Ni);    					// The dimensions of the input matrix
+     const int2 in_dim = make_int2(Ni, Nb);    					// The dimensions of the input matrix
      const int in_size = sizeof(float) * in_dim.x * in_dim.y;   // Total size of input buffer in bytes
 
-     const int2 out_dim = make_int2(Nn, in_dim.x);               // The dimensions of the output matrix
+     const int2 out_dim = make_int2(Nn, Nb);               // The dimensions of the output matrix
      const int out_size = sizeof(float) * out_dim.x * out_dim.y; // Total size of output buffer in bytes
 
-     const dim3 grid_size((out_dim.x * out_dim.y)/16,16,1);
+     const dim3 grid_size(in_dim.x/16,in_dim.y/16,1);
      const dim3 block_size(16,16,1);
 
      float *h_in_data = new float[in_dim.x * in_dim.y]; // Input data on host
-     float *d_in_data;    // Input data on device
-
      float *h_out_data = new float[out_dim.x * out_dim.y];    // Output on device
-     float *d_out_data;    // Output on host
-
      float *h_random_weights = new float[Ni*Nn];
 
      // Make some random data.
@@ -102,31 +157,35 @@ int main(int argc, char **argv)
 
      cudaMemcpyToSymbol(d_weights, h_random_weights, Nn*Ni*sizeof(float));
 
-     cudaMalloc(&d_in_data, in_size);
-     cudaMemcpy(d_in_data, h_in_data, in_size, cudaMemcpyHostToDevice); // Give the GPU our input data.
+     cudaMemcpyToSymbol(d_inputs, h_in_data, in_size); // Give the GPU our input data.
 
-     cudaMalloc(&d_out_data, out_size);
-
-     classify<<<grid_size, block_size>>>((float*)d_in_data, (float*)d_out_data, in_dim);
+     classify<<<grid_size, block_size>>>();
      cudaDeviceSynchronize();
 
-     cudaMemcpy(h_out_data, d_out_data, out_size, cudaMemcpyDeviceToHost); // Retrieve the neuron outputs.
+     cudaMemcpyFromSymbol(h_out_data, d_outputs, out_size); // Retrieve the neuron outputs.
 
 
      if(DEBUG)
      {
-		 for(int i = 0; i < Nn*Ni; i++)
-			 printf("%f ", h_random_weights[i]);
-		 printf("\n\n");
-
-		 for(int i = 0; i < in_dim.y; i++)
+		 for(int i = 0; i < Nn; i++)
 		 {
-			 for(int j = 0; j < in_dim.x; j++)
+			 for(int j = 0; j < Ni; j++)
 			 {
-				 printf("%f ", h_in_data[i*in_dim.x + j]);
+				 printf("%f ", h_random_weights[i*Ni + j]);
 			 }
 			 printf("\n");
 		 }
+		 printf("\n");
+
+		 for(int i = 0; i < in_dim.x; i++)
+		 {
+			 for(int j = 0; j < in_dim.y; j++)
+			 {
+				 printf("%f ", h_in_data[i*in_dim.y + j]);
+			 }
+			 printf("\n");
+		 }
+		 printf("\n");
 
 		 for(int i = 0; i < out_dim.x; i++)
 		 {
