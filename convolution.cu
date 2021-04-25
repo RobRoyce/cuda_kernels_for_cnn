@@ -87,9 +87,15 @@ int main(int argc, char **argv) {
 
 
     // Start timer and execute kernel
+    cudaStream_t streams[Batch];
+    for (int i = 0; i < Batch; i++)
+        cudaStreamCreate(&streams[i]);
+
     begin_roi();
+
     for (int batch = 0; batch < Batch; batch++)
-        convolution<<<blocksPerGrid, threadsPerBlock>>>(batch);
+        convolution<<<blocksPerGrid, threadsPerBlock, 0, streams[batch]>>>(batch);
+
     gpuErrchk(cudaDeviceSynchronize());
     end_roi();
 
