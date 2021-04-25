@@ -1,0 +1,164 @@
+==39778== NVPROF is profiling process 39778, command: ./class1
+==39778== Some kernel(s) will be replayed on device 0 in order to collect all events/metrics.
+==39778== Profiling application: ./class1
+==39778== Profiling result:
+==39778== Metric result:
+"Device","Kernel","Invocations","Metric Name","Metric Description","Min","Max","Avg"
+"TITAN V (0)","classify(float*, float*, int2)",1,"inst_per_warp","Instructions per warp",1218.539062,1218.539062,1218.539062
+"TITAN V (0)","classify(float*, float*, int2)",1,"branch_efficiency","Branch Efficiency",99.858357%,99.858357%,99.858357%
+"TITAN V (0)","classify(float*, float*, int2)",1,"warp_execution_efficiency","Warp Execution Efficiency",55.170126%,55.170126%,55.170126%
+"TITAN V (0)","classify(float*, float*, int2)",1,"warp_nonpred_execution_efficiency","Warp Non-Predicated Execution Efficiency",54.499537%,54.499537%,54.499537%
+"TITAN V (0)","classify(float*, float*, int2)",1,"inst_replay_overhead","Instruction Replay Overhead",0.000124,0.000124,0.000124
+"TITAN V (0)","classify(float*, float*, int2)",1,"shared_load_transactions_per_request","Shared Memory Load Transactions Per Request",0.000000,0.000000,0.000000
+"TITAN V (0)","classify(float*, float*, int2)",1,"shared_store_transactions_per_request","Shared Memory Store Transactions Per Request",0.000000,0.000000,0.000000
+"TITAN V (0)","classify(float*, float*, int2)",1,"local_load_transactions_per_request","Local Memory Load Transactions Per Request",0.000000,0.000000,0.000000
+"TITAN V (0)","classify(float*, float*, int2)",1,"local_store_transactions_per_request","Local Memory Store Transactions Per Request",0.000000,0.000000,0.000000
+"TITAN V (0)","classify(float*, float*, int2)",1,"gld_transactions_per_request","Global Load Transactions Per Request",8.499597,8.499597,8.499597
+"TITAN V (0)","classify(float*, float*, int2)",1,"gst_transactions_per_request","Global Store Transactions Per Request",2.000000,2.000000,2.000000
+"TITAN V (0)","classify(float*, float*, int2)",1,"shared_store_transactions","Shared Store Transactions",0,0,0
+"TITAN V (0)","classify(float*, float*, int2)",1,"shared_load_transactions","Shared Load Transactions",0,0,0
+"TITAN V (0)","classify(float*, float*, int2)",1,"local_load_transactions","Local Load Transactions",0,0,0
+"TITAN V (0)","classify(float*, float*, int2)",1,"local_store_transactions","Local Store Transactions",0,0,0
+"TITAN V (0)","classify(float*, float*, int2)",1,"gld_transactions","Global Load Transactions",109179971,109179971,109179971
+"TITAN V (0)","classify(float*, float*, int2)",1,"gst_transactions","Global Store Transactions",12845056,12845056,12845056
+"TITAN V (0)","classify(float*, float*, int2)",1,"sysmem_read_transactions","System Memory Read Transactions",0,0,0
+"TITAN V (0)","classify(float*, float*, int2)",1,"sysmem_write_transactions","System Memory Write Transactions",5,5,5
+"TITAN V (0)","classify(float*, float*, int2)",1,"l2_read_transactions","L2 Read Transactions",13151631,13151631,13151631
+"TITAN V (0)","classify(float*, float*, int2)",1,"l2_write_transactions","L2 Write Transactions",12845072,12845072,12845072
+"TITAN V (0)","classify(float*, float*, int2)",1,"dram_read_transactions","Device Memory Read Transactions",12849975,12849975,12849975
+"TITAN V (0)","classify(float*, float*, int2)",1,"dram_write_transactions","Device Memory Write Transactions",61103,61103,61103
+"TITAN V (0)","classify(float*, float*, int2)",1,"global_hit_rate","Global Hit Rate in unified l1/tex",89.223166%,89.223166%,89.223166%
+"TITAN V (0)","classify(float*, float*, int2)",1,"local_hit_rate","Local Hit Rate",0.000000%,0.000000%,0.000000%
+"TITAN V (0)","classify(float*, float*, int2)",1,"gld_requested_throughput","Requested Global Load Throughput",149.329278GB/s,149.329278GB/s,149.329278GB/s
+"TITAN V (0)","classify(float*, float*, int2)",1,"gst_requested_throughput","Requested Global Store Throughput",140.539930GB/s,140.539930GB/s,140.539930GB/s
+"TITAN V (0)","classify(float*, float*, int2)",1,"gld_throughput","Global Load Throughput",1194.556530GB/s,1194.556530GB/s,1194.556530GB/s
+"TITAN V (0)","classify(float*, float*, int2)",1,"gst_throughput","Global Store Throughput",140.539930GB/s,140.539930GB/s,140.539930GB/s
+"TITAN V (0)","classify(float*, float*, int2)",1,"local_memory_overhead","Local Memory Overhead",49.433609%,49.433609%,49.433609%
+"TITAN V (0)","classify(float*, float*, int2)",1,"tex_cache_hit_rate","Unified Cache Hit Rate",78.701706%,78.701706%,78.701706%
+"TITAN V (0)","classify(float*, float*, int2)",1,"l2_tex_read_hit_rate","L2 Hit Rate (Texture Reads)",51.117403%,51.117403%,51.117403%
+"TITAN V (0)","classify(float*, float*, int2)",1,"l2_tex_write_hit_rate","L2 Hit Rate (Texture Writes)",100.000000%,100.000000%,100.000000%
+"TITAN V (0)","classify(float*, float*, int2)",1,"dram_read_throughput","Device Memory Read Throughput",140.593750GB/s,140.593750GB/s,140.593750GB/s
+"TITAN V (0)","classify(float*, float*, int2)",1,"dram_write_throughput","Device Memory Write Throughput",684.583176MB/s,684.583176MB/s,684.583175MB/s
+"TITAN V (0)","classify(float*, float*, int2)",1,"tex_cache_throughput","Unified cache to Multiprocessor throughput",1856.046847GB/s,1856.046847GB/s,1856.046847GB/s
+"TITAN V (0)","classify(float*, float*, int2)",1,"l2_tex_read_throughput","L2 Throughput (Texture Reads)",143.821034GB/s,143.821034GB/s,143.821034GB/s
+"TITAN V (0)","classify(float*, float*, int2)",1,"l2_tex_write_throughput","L2 Throughput (Texture Writes)",140.539930GB/s,140.539930GB/s,140.539930GB/s
+"TITAN V (0)","classify(float*, float*, int2)",1,"l2_read_throughput","L2 Throughput (Reads)",143.894219GB/s,143.894219GB/s,143.894219GB/s
+"TITAN V (0)","classify(float*, float*, int2)",1,"l2_write_throughput","L2 Throughput (Writes)",140.540105GB/s,140.540105GB/s,140.540105GB/s
+"TITAN V (0)","classify(float*, float*, int2)",1,"sysmem_read_throughput","System Memory Read Throughput",0.000000B/s,0.000000B/s,0.000000B/s
+"TITAN V (0)","classify(float*, float*, int2)",1,"sysmem_write_throughput","System Memory Write Throughput",57.362305KB/s,57.362305KB/s,57.361328KB/s
+"TITAN V (0)","classify(float*, float*, int2)",1,"local_load_throughput","Local Memory Load Throughput",0.000000B/s,0.000000B/s,0.000000B/s
+"TITAN V (0)","classify(float*, float*, int2)",1,"local_store_throughput","Local Memory Store Throughput",0.000000B/s,0.000000B/s,0.000000B/s
+"TITAN V (0)","classify(float*, float*, int2)",1,"shared_load_throughput","Shared Memory Load Throughput",0.000000B/s,0.000000B/s,0.000000B/s
+"TITAN V (0)","classify(float*, float*, int2)",1,"shared_store_throughput","Shared Memory Store Throughput",0.000000B/s,0.000000B/s,0.000000B/s
+"TITAN V (0)","classify(float*, float*, int2)",1,"gld_efficiency","Global Memory Load Efficiency",12.500813%,12.500813%,12.500813%
+"TITAN V (0)","classify(float*, float*, int2)",1,"gst_efficiency","Global Memory Store Efficiency",100.000000%,100.000000%,100.000000%
+"TITAN V (0)","classify(float*, float*, int2)",1,"tex_cache_transactions","Unified cache to Multiprocessor transactions",42409701,42409701,42409701
+"TITAN V (0)","classify(float*, float*, int2)",1,"flop_count_dp","Floating Point Operations(Double Precision)",0,0,0
+"TITAN V (0)","classify(float*, float*, int2)",1,"flop_count_dp_add","Floating Point Operations(Double Precision Add)",0,0,0
+"TITAN V (0)","classify(float*, float*, int2)",1,"flop_count_dp_fma","Floating Point Operations(Double Precision FMA)",0,0,0
+"TITAN V (0)","classify(float*, float*, int2)",1,"flop_count_dp_mul","Floating Point Operations(Double Precision Mul)",0,0,0
+"TITAN V (0)","classify(float*, float*, int2)",1,"flop_count_sp","Floating Point Operations(Single Precision)",205520896,205520896,205520896
+"TITAN V (0)","classify(float*, float*, int2)",1,"flop_count_sp_add","Floating Point Operations(Single Precision Add)",0,0,0
+"TITAN V (0)","classify(float*, float*, int2)",1,"flop_count_sp_fma","Floating Point Operations(Single Precision FMA)",102760448,102760448,102760448
+"TITAN V (0)","classify(float*, float*, int2)",1,"flop_count_sp_mul","Floating Point Operation(Single Precision Mul)",0,0,0
+"TITAN V (0)","classify(float*, float*, int2)",1,"flop_count_sp_special","Floating Point Operations(Single Precision Special)",0,0,0
+"TITAN V (0)","classify(float*, float*, int2)",1,"inst_executed","Instructions Executed",39929088,39929088,39929088
+"TITAN V (0)","classify(float*, float*, int2)",1,"inst_issued","Instructions Issued",30366899,30366899,30366899
+"TITAN V (0)","classify(float*, float*, int2)",1,"dram_utilization","Device Memory Utilization","Low (3)","Low (3)","Low (3)"
+"TITAN V (0)","classify(float*, float*, int2)",1,"sysmem_utilization","System Memory Utilization","Low (1)","Low (1)","Low (1)"
+"TITAN V (0)","classify(float*, float*, int2)",1,"stall_inst_fetch","Issue Stall Reasons (Instructions Fetch)",0.247575%,0.247575%,0.247575%
+"TITAN V (0)","classify(float*, float*, int2)",1,"stall_exec_dependency","Issue Stall Reasons (Execution Dependency)",12.750717%,12.750717%,12.750717%
+"TITAN V (0)","classify(float*, float*, int2)",1,"stall_memory_dependency","Issue Stall Reasons (Data Request)",86.800272%,86.800272%,86.800272%
+"TITAN V (0)","classify(float*, float*, int2)",1,"stall_texture","Issue Stall Reasons (Texture)",0.000000%,0.000000%,0.000000%
+"TITAN V (0)","classify(float*, float*, int2)",1,"stall_sync","Issue Stall Reasons (Synchronization)",0.000000%,0.000000%,0.000000%
+"TITAN V (0)","classify(float*, float*, int2)",1,"stall_other","Issue Stall Reasons (Other)",0.002645%,0.002645%,0.002645%
+"TITAN V (0)","classify(float*, float*, int2)",1,"stall_constant_memory_dependency","Issue Stall Reasons (Immediate constant)",0.122183%,0.122183%,0.122183%
+"TITAN V (0)","classify(float*, float*, int2)",1,"stall_pipe_busy","Issue Stall Reasons (Pipe Busy)",0.015711%,0.015711%,0.015711%
+"TITAN V (0)","classify(float*, float*, int2)",1,"shared_efficiency","Shared Memory Efficiency",0.000000%,0.000000%,0.000000%
+"TITAN V (0)","classify(float*, float*, int2)",1,"inst_fp_32","FP Instructions(Single)",102760448,102760448,102760448
+"TITAN V (0)","classify(float*, float*, int2)",1,"inst_fp_64","FP Instructions(Double)",0,0,0
+"TITAN V (0)","classify(float*, float*, int2)",1,"inst_integer","Integer Instructions",68182016,68182016,68182016
+"TITAN V (0)","classify(float*, float*, int2)",1,"inst_bit_convert","Bit-Convert Instructions",0,0,0
+"TITAN V (0)","classify(float*, float*, int2)",1,"inst_control","Control-Flow Instructions",6025216,6025216,6025216
+"TITAN V (0)","classify(float*, float*, int2)",1,"inst_compute_ld_st","Load/Store Instructions",308285440,308285440,308285440
+"TITAN V (0)","classify(float*, float*, int2)",1,"inst_misc","Misc Instructions",9986048,9986048,9986048
+"TITAN V (0)","classify(float*, float*, int2)",1,"inst_inter_thread_communication","Inter-Thread Instructions",0,0,0
+"TITAN V (0)","classify(float*, float*, int2)",1,"issue_slots","Issue Slots",30366899,30366899,30366899
+"TITAN V (0)","classify(float*, float*, int2)",1,"cf_issued","Issued Control-Flow Instructions",311552,311552,311552
+"TITAN V (0)","classify(float*, float*, int2)",1,"cf_executed","Executed Control-Flow Instructions",311552,311552,311552
+"TITAN V (0)","classify(float*, float*, int2)",1,"ldst_issued","Issued Load/Store Instructions",19366144,19366144,19366144
+"TITAN V (0)","classify(float*, float*, int2)",1,"ldst_executed","Executed Load/Store Instructions",19366144,19366144,19366144
+"TITAN V (0)","classify(float*, float*, int2)",1,"atomic_transactions","Atomic Transactions",0,0,0
+"TITAN V (0)","classify(float*, float*, int2)",1,"atomic_transactions_per_request","Atomic Transactions Per Request",0.000000,0.000000,0.000000
+"TITAN V (0)","classify(float*, float*, int2)",1,"l2_atomic_throughput","L2 Throughput (Atomic requests)",0.000000B/s,0.000000B/s,0.000000B/s
+"TITAN V (0)","classify(float*, float*, int2)",1,"l2_atomic_transactions","L2 Transactions (Atomic requests)",0,0,0
+"TITAN V (0)","classify(float*, float*, int2)",1,"l2_tex_read_transactions","L2 Transactions (Texture Reads)",13144942,13144942,13144942
+"TITAN V (0)","classify(float*, float*, int2)",1,"stall_memory_throttle","Issue Stall Reasons (Memory Throttle)",0.013419%,0.013419%,0.013419%
+"TITAN V (0)","classify(float*, float*, int2)",1,"stall_not_selected","Issue Stall Reasons (Not Selected)",0.047479%,0.047479%,0.047479%
+"TITAN V (0)","classify(float*, float*, int2)",1,"l2_tex_write_transactions","L2 Transactions (Texture Writes)",12845056,12845056,12845056
+"TITAN V (0)","classify(float*, float*, int2)",1,"flop_count_hp","Floating Point Operations(Half Precision)",0,0,0
+"TITAN V (0)","classify(float*, float*, int2)",1,"flop_count_hp_add","Floating Point Operations(Half Precision Add)",0,0,0
+"TITAN V (0)","classify(float*, float*, int2)",1,"flop_count_hp_mul","Floating Point Operation(Half Precision Mul)",0,0,0
+"TITAN V (0)","classify(float*, float*, int2)",1,"flop_count_hp_fma","Floating Point Operations(Half Precision FMA)",0,0,0
+"TITAN V (0)","classify(float*, float*, int2)",1,"inst_fp_16","HP Instructions(Half)",0,0,0
+"TITAN V (0)","classify(float*, float*, int2)",1,"ipc","Executed IPC",0.123589,0.123589,0.123589
+"TITAN V (0)","classify(float*, float*, int2)",1,"issued_ipc","Issued IPC",0.123476,0.123476,0.123476
+"TITAN V (0)","classify(float*, float*, int2)",1,"issue_slot_utilization","Issue Slot Utilization",3.086892%,3.086892%,3.086892%
+"TITAN V (0)","classify(float*, float*, int2)",1,"sm_efficiency","Multiprocessor Activity",93.891620%,93.891620%,93.891620%
+"TITAN V (0)","classify(float*, float*, int2)",1,"achieved_occupancy","Achieved Occupancy",0.078711,0.078711,0.078711
+"TITAN V (0)","classify(float*, float*, int2)",1,"eligible_warps_per_cycle","Eligible Warps Per Active Cycle",0.124946,0.124946,0.124946
+"TITAN V (0)","classify(float*, float*, int2)",1,"shared_utilization","Shared Memory Utilization","Idle (0)","Idle (0)","Idle (0)"
+"TITAN V (0)","classify(float*, float*, int2)",1,"l2_utilization","L2 Cache Utilization","Low (1)","Low (1)","Low (1)"
+"TITAN V (0)","classify(float*, float*, int2)",1,"tex_utilization","Unified Cache Utilization","Low (2)","Low (2)","Low (2)"
+"TITAN V (0)","classify(float*, float*, int2)",1,"ldst_fu_utilization","Load/Store Function Unit Utilization","Low (1)","Low (1)","Low (1)"
+"TITAN V (0)","classify(float*, float*, int2)",1,"cf_fu_utilization","Control-Flow Function Unit Utilization","Low (1)","Low (1)","Low (1)"
+"TITAN V (0)","classify(float*, float*, int2)",1,"tex_fu_utilization","Texture Function Unit Utilization","Idle (0)","Idle (0)","Idle (0)"
+"TITAN V (0)","classify(float*, float*, int2)",1,"special_fu_utilization","Special Function Unit Utilization","Idle (0)","Idle (0)","Idle (0)"
+"TITAN V (0)","classify(float*, float*, int2)",1,"half_precision_fu_utilization","Half-Precision Function Unit Utilization","Idle (0)","Idle (0)","Idle (0)"
+"TITAN V (0)","classify(float*, float*, int2)",1,"single_precision_fu_utilization","Single-Precision Function Unit Utilization","Low (1)","Low (1)","Low (1)"
+"TITAN V (0)","classify(float*, float*, int2)",1,"double_precision_fu_utilization","Double-Precision Function Unit Utilization","Idle (0)","Idle (0)","Idle (0)"
+"TITAN V (0)","classify(float*, float*, int2)",1,"flop_hp_efficiency","FLOP Efficiency(Peak Half)",0.000000%,0.000000%,0.000000%
+"TITAN V (0)","classify(float*, float*, int2)",1,"flop_sp_efficiency","FLOP Efficiency(Peak Single)",0.606733%,0.606733%,0.606733%
+"TITAN V (0)","classify(float*, float*, int2)",1,"flop_dp_efficiency","FLOP Efficiency(Peak Double)",0.000000%,0.000000%,0.000000%
+"TITAN V (0)","classify(float*, float*, int2)",1,"sysmem_read_utilization","System Memory Read Utilization","Idle (0)","Idle (0)","Idle (0)"
+"TITAN V (0)","classify(float*, float*, int2)",1,"sysmem_write_utilization","System Memory Write Utilization","Low (1)","Low (1)","Low (1)"
+"TITAN V (0)","classify(float*, float*, int2)",1,"stall_sleeping","Issue Stall Reasons (Sleeping)",0.000000%,0.000000%,0.000000%
+"TITAN V (0)","classify(float*, float*, int2)",1,"pcie_total_data_transmitted","PCIe Total Data Transmitted",33280,33280,33280
+"TITAN V (0)","classify(float*, float*, int2)",1,"pcie_total_data_received","PCIe Total Data Received",55808,55808,55808
+"TITAN V (0)","classify(float*, float*, int2)",1,"inst_executed_global_loads","Warp level instructions for global loads",12845312,12845312,12845312
+"TITAN V (0)","classify(float*, float*, int2)",1,"inst_executed_local_loads","Warp level instructions for local loads",0,0,0
+"TITAN V (0)","classify(float*, float*, int2)",1,"inst_executed_shared_loads","Warp level instructions for shared loads",0,0,0
+"TITAN V (0)","classify(float*, float*, int2)",1,"inst_executed_surface_loads","Warp level instructions for surface loads",0,0,0
+"TITAN V (0)","classify(float*, float*, int2)",1,"inst_executed_global_stores","Warp level instructions for global stores",6422528,6422528,6422528
+"TITAN V (0)","classify(float*, float*, int2)",1,"inst_executed_local_stores","Warp level instructions for local stores",0,0,0
+"TITAN V (0)","classify(float*, float*, int2)",1,"inst_executed_shared_stores","Warp level instructions for shared stores",0,0,0
+"TITAN V (0)","classify(float*, float*, int2)",1,"inst_executed_surface_stores","Warp level instructions for surface stores",0,0,0
+"TITAN V (0)","classify(float*, float*, int2)",1,"inst_executed_global_atomics","Warp level instructions for global atom and atom cas",0,0,0
+"TITAN V (0)","classify(float*, float*, int2)",1,"inst_executed_global_reductions","Warp level instructions for global reductions",0,0,0
+"TITAN V (0)","classify(float*, float*, int2)",1,"inst_executed_surface_atomics","Warp level instructions for surface atom and atom cas",0,0,0
+"TITAN V (0)","classify(float*, float*, int2)",1,"inst_executed_surface_reductions","Warp level instructions for surface reductions",0,0,0
+"TITAN V (0)","classify(float*, float*, int2)",1,"inst_executed_shared_atomics","Warp level shared instructions for atom and atom CAS",0,0,0
+"TITAN V (0)","classify(float*, float*, int2)",1,"inst_executed_tex_ops","Warp level instructions for texture",0,0,0
+"TITAN V (0)","classify(float*, float*, int2)",1,"dram_read_bytes","Total bytes read from DRAM to L2 cache",411199200,411199200,411199200
+"TITAN V (0)","classify(float*, float*, int2)",1,"dram_write_bytes","Total bytes written from L2 cache to DRAM",1955296,1955296,1955296
+"TITAN V (0)","classify(float*, float*, int2)",1,"global_load_requests","Total number of global load requests from Multiprocessor",12845312,12845312,12845312
+"TITAN V (0)","classify(float*, float*, int2)",1,"local_load_requests","Total number of local load requests from Multiprocessor",0,0,0
+"TITAN V (0)","classify(float*, float*, int2)",1,"surface_load_requests","Total number of surface load requests from Multiprocessor",0,0,0
+"TITAN V (0)","classify(float*, float*, int2)",1,"global_store_requests","Total number of global store requests from Multiprocessor",6422528,6422528,6422528
+"TITAN V (0)","classify(float*, float*, int2)",1,"local_store_requests","Total number of local store requests from Multiprocessor",0,0,0
+"TITAN V (0)","classify(float*, float*, int2)",1,"surface_store_requests","Total number of surface store requests from Multiprocessor",0,0,0
+"TITAN V (0)","classify(float*, float*, int2)",1,"global_atomic_requests","Total number of global atomic requests from Multiprocessor",0,0,0
+"TITAN V (0)","classify(float*, float*, int2)",1,"global_reduction_requests","Total number of global reduction requests from Multiprocessor",0,0,0
+"TITAN V (0)","classify(float*, float*, int2)",1,"surface_atomic_requests","Total number of surface atomic requests from Multiprocessor",0,0,0
+"TITAN V (0)","classify(float*, float*, int2)",1,"surface_reduction_requests","Total number of surface reduction requests from Multiprocessor",0,0,0
+"TITAN V (0)","classify(float*, float*, int2)",1,"l2_global_load_bytes","Bytes read from L2 for misses in L1 for global loads",420548032,420548032,420548032
+"TITAN V (0)","classify(float*, float*, int2)",1,"l2_local_load_bytes","Bytes read from L2 for misses in L1 for local loads",0,0,0
+"TITAN V (0)","classify(float*, float*, int2)",1,"l2_surface_load_bytes","Bytes read from L2 for misses in L1 for surface loads",0,0,0
+"TITAN V (0)","classify(float*, float*, int2)",1,"l2_global_atomic_store_bytes","Bytes written to L2 from L1 for global atomics",0,0,0
+"TITAN V (0)","classify(float*, float*, int2)",1,"l2_local_global_store_bytes","Bytes written to L2 from L1 for local and global stores.",411041792,411041792,411041792
+"TITAN V (0)","classify(float*, float*, int2)",1,"l2_surface_store_bytes","Bytes read from L2 for misses in L1 for surface stores",0,0,0
+"TITAN V (0)","classify(float*, float*, int2)",1,"sysmem_read_bytes","System Memory Read Bytes",0,0,0
+"TITAN V (0)","classify(float*, float*, int2)",1,"sysmem_write_bytes","System Memory Write Bytes",160,160,160
+"TITAN V (0)","classify(float*, float*, int2)",1,"l2_tex_hit_rate","L2 Cache Hit Rate",75.276685%,75.276685%,75.276685%
+"TITAN V (0)","classify(float*, float*, int2)",1,"texture_load_requests","Total number of texture Load requests from Multiprocessor",0,0,0
+"TITAN V (0)","classify(float*, float*, int2)",1,"tensor_precision_fu_utilization","Tensor-Precision Function Unit Utilization","Idle (0)","Idle (0)","Idle (0)"
