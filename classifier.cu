@@ -57,20 +57,16 @@ __device__ void matadd_blk_global(float *dst, int2 dstDim, float mat[BLK_SZ][BLK
     atomicAdd(&dst[dstDim.y*(BLK_SZ*blkX + row) + (BLK_SZ*blkY + col)], mat[row][col]);
 }
 
+/* Reads the matrix mat from src. src should be a pointer to a block matrix whose elements are square matrices of size BLK_SZ*/
 __device__ void matread_blk(float *src, int2 srcDim, float mat[BLK_SZ][BLK_SZ], int blkX, int blkY)
 {
     const int row = threadIdx.x;
     const int col = threadIdx.y;
 
-    const int idx = srcDim.y*(BLK_SZ*blkX + row) + (BLK_SZ*blkY + col);
-    if(idx >= (srcDim.x * srcDim.y))
-    {
-    	printf("bounds error srcDim=(%d,%d) (%d,%d) block (%d,%d): %d\n", srcDim.x, srcDim.y, row, col, blkX, blkY, idx);
-    }
-
-    mat[row][col] = src[idx];
+    mat[row][col] = src[srcDim.y*(BLK_SZ*blkX + row) + (BLK_SZ*blkY + col)];
 }
 
+/* Writes the matrix mat into dst. dst should be a pointer to a block matrix whose elements are square matrices of size BLK_SZ*/
 __device__ void matwrite_blk(float *dst, int2 srcDim, float mat[BLK_SZ][BLK_SZ], int blkX, int blkY)
 {
     const int row = threadIdx.x;
@@ -79,6 +75,7 @@ __device__ void matwrite_blk(float *dst, int2 srcDim, float mat[BLK_SZ][BLK_SZ],
     dst[srcDim.y*(BLK_SZ*blkX + row) + (BLK_SZ*blkY + col)] = mat[row][col];
 }
 
+/* Sets all elements of mat to 0 */
 __device__ void blk_zero(float mat[BLK_SZ][BLK_SZ])
 {
     const int row = threadIdx.x;
@@ -115,12 +112,9 @@ __global__ void classify()
         matread_blk((float*)d_weights, weightDim, weightBlk, i, blkX);
         blk_zero(outBlk);
 
-
-        //__threadfence();
+        __threadfence();
 
         matmul_blk(weightBlk, inBlk, outBlk);
-
-        //__threadfence();
 
         matadd_blk_global((float*)d_outputs, outDim, outBlk, i, blkY);
 
